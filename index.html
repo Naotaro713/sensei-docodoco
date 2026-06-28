@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>せんせい どこどこボード — デモ版</title>
+<style>
+  :root{
+    --ink:#2A2F3A; --muted:#737C8B; --faint:#A6AEBC;
+    --line:#ECEEF2; --line-2:#DFE3EA; --bg:#F5F6F9; --field:#FFFFFF;
+    --jhs-rgb:92,148,140; --shs-rgb:108,115,158;
+    --jhs:rgb(var(--jhs-rgb)); --jhs-d:#4A7C75; --jhs-bg:#EAF2F0;
+    --shs:rgb(var(--shs-rgb)); --shs-d:#585F87; --shs-bg:#EDEEF5;
+    --tag-alpha:.82; --act-class:#E8923A; --act-meet:#E05A5A;
+    --font-sans:system-ui,-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP","Meiryo",sans-serif;
+    --font-mono:ui-monospace,"SF Mono","Consolas",monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh;}
+  .wrap{max-width:1060px;margin:0 auto;padding:24px 18px 56px;}
+
+  .toprow{display:flex;justify-content:space-between;align-items:center;gap:12px;}
+  .eb{font-family:var(--font-mono);font-size:11px;letter-spacing:.16em;color:var(--faint);font-weight:700;}
+  h1.title{font-size:25px;font-weight:800;letter-spacing:-.01em;margin:3px 0 0;}
+  .lede{color:var(--muted);font-size:13px;margin:8px 0 18px;}
+  .langtoggle,.helpbtn{border:1.5px solid var(--line-2);background:#fff;color:var(--muted);font:inherit;font-size:12.5px;font-weight:700;padding:7px 14px;border-radius:999px;cursor:pointer;white-space:nowrap;flex:none;}
+  .langtoggle:hover,.helpbtn:hover{border-color:var(--shs);color:var(--ink);}
+  .trcluster{display:flex;gap:8px;align-items:center;flex:none;}
+
+  .divsw{display:inline-flex;background:#fff;border:1.5px solid var(--line-2);border-radius:14px;padding:4px;gap:4px;margin-bottom:16px;}
+  .divsw button{border:none;background:transparent;font:inherit;font-weight:700;font-size:14px;color:var(--muted);padding:9px 18px;border-radius:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.1;transition:background .15s,color .15s;}
+  .divsw button .rng{font-family:var(--font-mono);font-size:9.5px;font-weight:600;letter-spacing:.04em;opacity:.7;}
+  .divsw button[data-on="jhs"][aria-pressed="true"]{background:var(--jhs);color:#fff;}
+  .divsw button[data-on="shs"][aria-pressed="true"]{background:var(--shs);color:#fff;}
+
+  .filters{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:14px;}
+  .filters .search{position:relative;flex:1 1 200px;min-width:160px;}
+  .filters .search input{width:100%;padding:9px 12px 9px 34px;border:1.5px solid var(--line-2);border-radius:11px;font:inherit;font-size:14px;background:var(--field);color:var(--ink);}
+  .filters .search input::placeholder{color:var(--faint);}
+  .filters .search input:focus{outline:none;border-color:var(--shs);}
+  .filters .search .ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--faint);}
+  .filters select{padding:9px 28px 9px 12px;border:1.5px solid var(--line-2);border-radius:11px;font:inherit;font-size:14px;background:var(--field);color:var(--ink);cursor:pointer;appearance:none;
+    background-image:linear-gradient(45deg,transparent 50%,var(--faint) 50%),linear-gradient(135deg,var(--faint) 50%,transparent 50%);
+    background-position:calc(100% - 15px) 52%,calc(100% - 10px) 52%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;}
+  .filters select:focus{outline:none;border-color:var(--shs);}
+  .filters .reset{border:none;background:none;color:var(--shs);font:inherit;font-size:13px;font-weight:700;cursor:pointer;padding:6px 4px;}
+  .filters .count{font-size:13px;color:var(--muted);margin-left:auto;white-space:nowrap;}
+  .filters .count b{color:var(--ink);}
+
+  .board{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px 12px 20px;overflow-x:auto;box-shadow:0 1px 2px rgba(42,47,58,.04),0 10px 24px rgba(42,47,58,.05);}
+  .lanes{display:flex;min-width:min-content;}
+  .lane{flex:1 0 110px;min-width:110px;border-right:1px solid var(--line);padding:0 9px;display:flex;flex-direction:column;}
+  .lane:last-child{border-right:none;}
+  .lane .lh{display:flex;align-items:center;justify-content:center;text-align:center;margin:0 auto 14px;min-height:44px;font-size:12px;font-weight:700;color:var(--ink);background:var(--bg);border-radius:12px;padding:6px 8px;line-height:1.25;width:100%;}
+  .lane .drop{flex:1;min-height:320px;display:flex;flex-direction:column;gap:11px;align-items:center;border-radius:10px;transition:background .12s,box-shadow .12s;}
+  .lane.over .drop{background:var(--shs-bg);box-shadow:inset 0 0 0 2px var(--shs);}
+  .lane.over.jhs .drop{background:var(--jhs-bg);box-shadow:inset 0 0 0 2px var(--jhs);}
+
+  .tag{position:relative;width:92px;min-height:54px;background:rgba(var(--shs-rgb),var(--tag-alpha));color:#fff;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:10px 7px 9px;line-height:1.1;user-select:none;box-shadow:0 1px 2px rgba(42,47,58,.12),0 2px 6px rgba(42,47,58,.08);transition:opacity .15s,transform .1s,box-shadow .15s;cursor:pointer;}
+  .tag.jhs{background:rgba(var(--jhs-rgb),var(--tag-alpha));}
+  .tag .lt{font-size:18px;font-weight:800;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;}
+  .tag .actdot{position:absolute;top:6px;right:6px;z-index:2;width:12px;height:12px;border-radius:50%;box-shadow:0 0 0 2px rgba(255,255,255,.95),0 1px 2px rgba(42,47,58,.2);}
+  .tag .actdot.a-class{background:var(--act-class);} .tag .actdot.a-meet{background:var(--act-meet);}
+  .tag .ago{font-size:9.5px;font-weight:600;opacity:.78;margin-top:5px;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .tag.dim{opacity:.12;}
+  .tag.faded{opacity:.4;cursor:default;}
+  .tag.me{outline:2.5px solid var(--ink);outline-offset:2px;cursor:grab;touch-action:none;opacity:1;}
+  .tag.me::before{content:attr(data-you);position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap;}
+  .tag.me:active{cursor:grabbing;}
+  .tag.ghost{position:fixed;z-index:999;pointer-events:none;transform:scale(1.05) rotate(-2deg);box-shadow:0 12px 24px rgba(42,47,58,.28);opacity:.97;}
+
+  .legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:0 2px 12px;}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .legend i{width:10px;height:10px;border-radius:50%;display:inline-block;box-shadow:0 0 0 1.5px #fff,0 1px 2px rgba(42,47,58,.18);}
+  .legend .d-class{background:var(--act-class);} .legend .d-meet{background:var(--act-meet);}
+  .note{margin-top:20px;color:var(--faint);font-size:12.5px;line-height:1.65;border-top:1px solid var(--line);padding-top:14px;}
+  .note a{color:var(--shs);text-decoration:none;font-weight:600;} .note a:hover{text-decoration:underline;}
+
+  .back{display:inline-flex;gap:6px;align-items:center;color:var(--muted);text-decoration:none;font-size:13px;font-weight:600;}
+  .back:hover{color:var(--ink);}
+  .hint{border-radius:14px;padding:14px 16px;margin:14px 0;font-size:13.5px;}
+  .hint.jhs{background:var(--jhs-bg);color:var(--jhs-d);} .hint.shs{background:var(--shs-bg);color:var(--shs-d);}
+  .hint .nm{font-weight:800;font-size:15px;} .hint .cur{display:block;margin-top:4px;opacity:.85;}
+  .acts{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+  .acts .lbl{font-size:13px;font-weight:700;color:var(--muted);}
+  .acts button{border:1.5px solid var(--line-2);background:#fff;color:var(--ink);font:inherit;font-size:13.5px;font-weight:600;padding:8px 16px;border-radius:999px;cursor:pointer;white-space:nowrap;transition:background .12s,border-color .12s,color .12s;}
+  .acts button:hover{border-color:var(--shs);}
+  .acts button[aria-pressed="true"]{background:var(--shs);border-color:var(--shs);color:#fff;}
+  .locpick{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+  .locpick .lbl{font-size:13px;font-weight:700;color:var(--muted);}
+  .locpick button{border:1.5px solid var(--line-2);background:#fff;color:var(--ink);font:inherit;font-size:13.5px;font-weight:600;padding:8px 14px;border-radius:999px;cursor:pointer;white-space:nowrap;transition:background .12s,border-color .12s,color .12s;}
+  .locpick button:hover{border-color:var(--shs);}
+  .locpick button[aria-pressed="true"]{background:var(--shs);border-color:var(--shs);color:#fff;}
+
+  .links h2{font-size:20px;font-weight:800;margin:14px 0 4px;}
+  .links .sub{color:var(--muted);font-size:13.5px;margin:0 0 14px;}
+  .links .search{position:relative;margin-bottom:8px;}
+  .links .search input{width:100%;padding:9px 12px 9px 34px;border:1.5px solid var(--line-2);border-radius:11px;font:inherit;font-size:14px;}
+  .links .search input:focus{outline:none;border-color:var(--shs);}
+  .links .search .ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--faint);}
+  .links .grp{font-size:12px;font-weight:800;letter-spacing:.04em;color:var(--muted);margin:16px 0 8px;}
+  .lkgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:8px;}
+  .lk{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 10px;text-decoration:none;color:inherit;transition:border-color .12s,box-shadow .12s;}
+  .lk:hover{border-color:var(--shs);box-shadow:0 4px 12px rgba(42,47,58,.06);}
+  .lk .nm{font-size:14px;font-weight:700;line-height:1.2;} .lk .dp{font-size:11px;color:var(--faint);}
+  .lk .go{margin-left:auto;font-family:var(--font-mono);font-size:14px;color:var(--shs);font-weight:700;}
+  .lk .tag{width:40px;min-height:auto;padding:6px 4px;border-radius:9px;cursor:default;box-shadow:none;}
+  .lk .tag .lt{font-size:14px;} .lk .tag .actdot{display:none;} .lk .tag .ago{display:none;}
+
+  .modal{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .modal[hidden]{display:none;}
+  .modal .bg{position:absolute;inset:0;background:rgba(42,47,58,.42);}
+  .modal .card{position:relative;background:#fff;border-radius:16px;padding:20px 22px 18px;max-width:330px;width:100%;box-shadow:0 20px 50px rgba(42,47,58,.3);}
+  .modal .mhead{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+  .modal .mtag{width:56px;border-radius:11px;color:#fff;padding:9px 5px;text-align:center;display:flex;flex-direction:column;line-height:1.1;}
+  .modal .mtag .l{font-size:19px;font-weight:800;} .modal .mtag .s{font-size:9px;opacity:.9;margin-top:1px;}
+  .modal .mname{font-size:18px;font-weight:800;} .modal .mrng{font-size:11px;font-family:var(--font-mono);color:var(--muted);margin-top:1px;}
+  .modal .row{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-top:1px solid var(--line);font-size:14px;}
+  .modal .row .k{color:var(--muted);} .modal .row .v{font-weight:700;}
+  .modal .v.act{color:var(--shs-d);}
+  .modal .close{margin-top:16px;width:100%;border:1.5px solid var(--line-2);background:#fff;color:var(--ink);font:inherit;font-size:14px;font-weight:700;padding:10px;border-radius:11px;cursor:pointer;}
+  .modal .close:hover{border-color:var(--shs);}
+  .helplist{margin:2px 0 6px;padding-left:18px;}
+  .helplist li{font-size:13.5px;color:var(--ink);margin:8px 0;line-height:1.55;}
+
+  #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(14px);background:var(--ink);color:#fff;padding:11px 20px;border-radius:999px;font-size:13.5px;font-weight:600;box-shadow:0 10px 28px rgba(42,47,58,.3);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:90;}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  @media (max-width:560px){ h1.title{font-size:22px;} .filters .count{margin-left:0;} }
+  @media (prefers-reduced-motion:reduce){ *{transition:none !important;} }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+  <div id="modal" class="modal" hidden></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ===== マスタ（内部値は日本語で保持。表示は言語に応じて変換）===== */
+  const LOCATIONS = ["職員室","言語棟","数社棟","特別教室棟","カフェ","体育館","小体育館","寮","校外"];
+  const SUBJECTS  = ["国語","数学","英語","理科","社会","体育","芸術"];
+  const ACTIVITIES = ["授業中","会議中"];
+  const LOC_EN={"職員室":"Staff Room","言語棟":"Language Bldg","数社棟":"Math/Soc. Bldg","特別教室棟":"Special Rooms","カフェ":"Cafe","体育館":"Gym","小体育館":"Small Gym","寮":"Dormitory","校外":"Off-campus"};
+  const SUB_EN={"国語":"Japanese","数学":"Math","英語":"English","理科":"Science","社会":"Social Studies","体育":"PE","芸術":"Arts"};
+  const ACT_EN={"授業中":"In class","会議中":"In a meeting"};
+  const DIVS={jhs:{ja:"中学",en:"Junior High",range:"G7–G9"}, shs:{ja:"高校",en:"High School",range:"G10–G12"}};
+  const STORE_KEY="higa_board_v7", LANG_KEY="higa_lang";
+
+  /* ===== 文言 ===== */
+  const S={
+    ja:{
+      brand:"HiGA・教職員ボード", title:"せんせい どこどこ ボード",
+      lede:"名札が置かれている列が、その先生のいまの所在です。名札を押すと活動などの詳細を確認できます。",
+      searchName:"名前でさがす", subAll:"教科：すべて", locAll:"場所：すべて", reset:"解除",
+      count:n=>`${n} 名`, countVis:(v,n)=>`${v} / ${n} 名`,
+      noteA:"ローカルで動くデモ版です。データはこの端末内にだけ保存されます。先生の更新画面は ", noteLink:"デモ用リンク一覧", noteB:" から開けます。",
+      backBoard:"← ボードを見る", backList:"← ボードに戻る",
+      demo:"デモ用", linksH:"先生別 更新リンク",
+      linksSub:"各先生は自分のリンクを開き、名札をドラッグして所在を更新します。本番版ではこのリンクを個別に配布するため、この一覧は不要になります。動作確認用に、名前で検索して開けます。",
+      searchNameDept:"名前・教科でさがす",
+      activity:"活動", actNone:"なし",
+      hint:n=>`強調された<b>あなたの名札（${esc(n)}）</b>を場所の列へドラッグするか、下の「場所」ボタンをタップして更新できます。`,
+      current:"現在：", sep:"・",
+      teacherNote:"このリンクはあなた専用です。動かせるのはあなたの名札だけで、ほかの先生には影響しません。本番版では各先生に推測されない固有リンクをお渡しする想定です。",
+      mSubject:"教科", mLocation:"場所", mActivity:"活動", mUpdated:"最終更新", close:"閉じる", detailNone:"なし",
+      notFound:"この先生は見つかりませんでした。", noMatch:"該当する先生がいません。",
+      you:"あなた", suffix:" 先生",
+      toastPlaced:l=>`${l} に置きました`, toastAct:a=>`${a} にしました`, toastActOff:"活動を解除しました",
+      justNow:"たった今", min:m=>`${m}分前`, hr:(h,r)=>r?`${h}時間${r}分`:`${h}時間前`,
+      langBtn:"English",
+      help:"使い方", helpTitle:"使い方", helpTitleT:"使い方（先生用）", ok:"わかりました", locationLabel:"場所",
+      helpBoard:["名札が置かれている列が、その先生のいまの所在です。","名札を押すと、活動や最終更新などの詳細が見られます。","上の「中学／高校」で表を切り替えられます。","名前・教科・場所で絞り込めます。","右上で日本語／English を切り替えられます。"],
+      helpTeacher:["あなたの名札（枠で強調されています）を、いまいる場所の列へドラッグして更新できます。","ドラッグの代わりに、下の「場所」ボタンをタップして選ぶこともできます。","「活動」で授業中・会議中を設定できます（任意）。","動かせるのはあなたの名札だけで、ほかの先生には影響しません。"]
+    },
+    en:{
+      brand:"HiGA · Teacher Board", title:"Teacher Locator Board",
+      lede:"Each name tag sits in the column where that teacher is now. Tap a tag to see details such as their activity.",
+      searchName:"Search by name", subAll:"Subject: All", locAll:"Location: All", reset:"Clear",
+      count:n=>`${n} teachers`, countVis:(v,n)=>`${v} / ${n} teachers`,
+      noteA:"This is a local demo. Data is stored only on this device. Teacher update screens open from the ", noteLink:"demo link list", noteB:".",
+      backBoard:"← Back to board", backList:"← Back to board",
+      demo:"DEMO", linksH:"Teacher update links",
+      linksSub:"Each teacher opens their own link and drags their name tag to update their location. In production these links are handed out individually, so this list is no longer needed. For testing, search by name to open one.",
+      searchNameDept:"Search by name or subject",
+      activity:"Activity", actNone:"None",
+      hint:n=>`Drag your highlighted <b>name tag (${esc(n)})</b> to a column, or tap a Location button below.`,
+      current:"Now: ", sep:" · ",
+      teacherNote:"This link is yours only. You can move only your own tag; it does not affect other teachers. In production, each teacher receives a unique, unguessable link.",
+      mSubject:"Subject", mLocation:"Location", mActivity:"Activity", mUpdated:"Updated", close:"Close", detailNone:"None",
+      notFound:"This teacher was not found.", noMatch:"No matching teacher.",
+      you:"You", suffix:"",
+      toastPlaced:l=>`Moved to ${l}`, toastAct:a=>`Set to ${a}`, toastActOff:"Activity cleared",
+      justNow:"Just now", min:m=>`${m}m ago`, hr:(h,r)=>r?`${h}h ${r}m ago`:`${h}h ago`,
+      langBtn:"日本語",
+      help:"Help", helpTitle:"How to use", helpTitleT:"How to use (teachers)", ok:"Got it", locationLabel:"Location",
+      helpBoard:["Each name tag sits in the column where that teacher is now.","Tap a tag to see details such as activity and last update.","Use the Junior High / High School switch at the top.","Filter by name, subject, or location.","Switch between 日本語 / English at the top right."],
+      helpTeacher:["Drag your highlighted name tag to the column where you are now.","Or tap a Location button below to choose your place.","Use Activity to set In class / In a meeting (optional).","You can move only your own tag; others are not affected."]
+    }
+  };
+
+  /* ===== サンプルデータ（name=名札表示=姓 / full=フルネーム）===== */
+  const SEED=[
+    {id:"t01",name:"A",dept:"国語",div:"jhs",loc:"職員室",    act:"",     agoMin:2},
+    {id:"t03",name:"C",dept:"英語",div:"jhs",loc:"言語棟",    act:"",     agoMin:22},
+    {id:"t05",name:"E",dept:"社会",div:"jhs",loc:"職員室",    act:"会議中",agoMin:5},
+    {id:"t07",name:"G",dept:"体育",div:"jhs",loc:"体育館",    act:"授業中",agoMin:1},
+    {id:"t08",name:"H",dept:"芸術",div:"jhs",loc:"特別教室棟",act:"",     agoMin:56},
+    {id:"t10",name:"J",dept:"国語",div:"jhs",loc:"言語棟",    act:"",     agoMin:33},
+    {id:"t12",name:"L",dept:"体育",div:"jhs",loc:"小体育館",  act:"授業中",agoMin:3},
+    {id:"t14",name:"N",dept:"英語",div:"jhs",loc:"カフェ",    act:"",     agoMin:9},
+    {id:"t17",name:"Q",dept:"社会",div:"jhs",loc:"寮",        act:"",     agoMin:6},
+    {id:"t19",name:"S",dept:"理科",div:"jhs",loc:"数社棟",    act:"",     agoMin:18},
+    {id:"t02",name:"B",dept:"数学",div:"shs",loc:"数社棟",    act:"",     agoMin:8},
+    {id:"t04",name:"D",dept:"理科",div:"shs",loc:"特別教室棟",act:"授業中",agoMin:41},
+    {id:"t06",name:"F",dept:"英語",div:"shs",loc:"カフェ",    act:"",     agoMin:12},
+    {id:"t09",name:"I",dept:"数学",div:"shs",loc:"校外",      act:"",     agoMin:82},
+    {id:"t11",name:"K",dept:"社会",div:"shs",loc:"職員室",    act:"",     agoMin:14},
+    {id:"t13",name:"M",dept:"理科",div:"shs",loc:"特別教室棟",act:"授業中",agoMin:27},
+    {id:"t15",name:"O",dept:"数学",div:"shs",loc:"職員室",    act:"",     agoMin:47},
+    {id:"t16",name:"P",dept:"芸術",div:"shs",loc:"特別教室棟",act:"",     agoMin:26},
+    {id:"t18",name:"R",dept:"国語",div:"shs",loc:"言語棟",    act:"会議中",agoMin:14},
+    {id:"t20",name:"T",dept:"英語",div:"shs",loc:"言語棟",    act:"",     agoMin:38}
+  ];
+
+  /* ===== 状態・データ層 ===== */
+  let lang="ja"; try{const l=localStorage.getItem(LANG_KEY); if(l==="en"||l==="ja")lang=l;}catch(e){}
+  function setLang(l){lang=l;try{localStorage.setItem(LANG_KEY,l);}catch(e){}}
+  const TT=()=>S[lang];
+
+  let mem=null;
+  function defaultData(){return SEED.map(t=>({id:t.id,name:t.name,full:t.full||t.name,dept:t.dept,div:t.div,loc:t.loc,act:t.act,updatedAt:Date.now()-t.agoMin*60000}));}
+  function getData(){try{const r=localStorage.getItem(STORE_KEY);if(r)return JSON.parse(r);}catch(e){}if(mem)return mem;const d=defaultData();saveData(d);return d;}
+  function saveData(d){mem=d;try{localStorage.setItem(STORE_KEY,JSON.stringify(d));}catch(e){}}
+  function findTeacher(id){return getData().find(t=>t.id===id)||null;}
+  function fullName(t){return t.full||t.name;}
+  function setLocation(id,loc){const d=getData(),t=d.find(x=>x.id===id);if(!t)return;t.loc=loc;t.updatedAt=Date.now();saveData(d);}
+  function setActivity(id,act){const d=getData(),t=d.find(x=>x.id===id);if(!t)return;t.act=act;t.updatedAt=Date.now();saveData(d);}
+
+  /* ===== 表示変換 ===== */
+  function locLabel(x){return lang==='en'?(LOC_EN[x]||x):x;}
+  function subLabel(x){return lang==='en'?(SUB_EN[x]||x):x;}
+  function actLabel(x){return lang==='en'?(ACT_EN[x]||x):x;}
+  function actBadge(x){return lang==='en'?({"授業中":"Class","会議中":"Meeting"}[x]||x):x;}
+  function divLabel(d){return DIVS[d][lang];}
+  function tName(t){return esc(fullName(t))+esc(TT().suffix);}
+
+  /* ===== util ===== */
+  function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+  function ago(ts){if(ts==null)return"";const m=Math.floor((Date.now()-ts)/60000);if(m<1)return TT().justNow;if(m<60)return TT().min(m);const h=Math.floor(m/60),r=m%60;return TT().hr(h,r);}
+  function hay(t){return [t.name,fullName(t),t.dept,SUB_EN[t.dept]||"",t.loc,LOC_EN[t.loc]||""].join(" ").toLowerCase();}
+  const root=document.getElementById("root");
+  let timer=null;function stopTimer(){if(timer){clearInterval(timer);timer=null;}}
+  function toast(m){const el=document.getElementById("toast");el.textContent=m;el.classList.add("show");clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove("show"),2000);}
+  function langBtn(){return `<button class="langtoggle">${esc(TT().langBtn)}</button>`;}
+  function helpBtn(){return '<button class="helpbtn">'+esc(TT().help)+'</button>';}
+  function topRight(){return '<div class="trcluster">'+helpBtn()+langBtn()+'</div>';}
+  function openHelp(ctx){
+    const isT=ctx==='teacher';
+    const items=(isT?TT().helpTeacher:TT().helpBoard).map(s=>`<li>${esc(s)}</li>`).join("");
+    const m=document.getElementById("modal");
+    m.innerHTML=`<div class="bg" data-close></div><div class="card help">
+      <div class="mname" style="margin-bottom:8px">${esc(isT?TT().helpTitleT:TT().helpTitle)}</div>
+      <ul class="helplist">${items}</ul>
+      <button class="close" data-close>${esc(TT().ok)}</button></div>`;
+    m.hidden=false;
+    m.querySelectorAll("[data-close]").forEach(el=>el.addEventListener("click",()=>{m.hidden=true;}));
+  }
+  function maybeHelp(ctx){const k="higa_help_"+ctx;let seen=false;try{seen=localStorage.getItem(k)==="1";}catch(e){}if(!seen){try{localStorage.setItem(k,"1");}catch(e){}openHelp(ctx);}}
+
+  function tagHTML(t,opts){
+    opts=opts||{};
+    let cls=t.div;
+    if(opts.me)cls+=" me"; else if(opts.faded)cls+=" faded";
+    const badge=t.act?`<span class="actdot ${t.act==='授業中'?'a-class':'a-meet'}" title="${esc(actLabel(t.act))}"></span>`:"";
+    return `<div class="tag ${cls}" data-id="${t.id}" data-you="${esc(TT().you)}" title="${tName(t)}${TT().sep}${esc(locLabel(t.loc))}${t.act?TT().sep+esc(actLabel(t.act)):''}">
+      ${badge}<span class="lt">${esc(t.name)}</span></div>`;
+  }
+  function lanesHTML(div,opts){
+    opts=opts||{};
+    const data=getData().filter(t=>t.div===div);
+    return `<div class="lanes">`+LOCATIONS.map(loc=>{
+      const here=data.filter(t=>t.loc===loc);
+      const mags=here.map(t=>tagHTML(t,opts.meId?{me:opts.meId===t.id,faded:opts.meId!==t.id}:{})).join("");
+      return `<div class="lane ${div}" data-loc="${esc(loc)}"><div class="lh">${esc(locLabel(loc))}</div><div class="drop">${mags}</div></div>`;
+    }).join("")+`</div>`;
+  }
+
+  /* ===== 詳細モーダル ===== */
+  function openDetail(id){
+    const t=findTeacher(id);if(!t)return;
+    const m=document.getElementById("modal");
+    m.innerHTML=`<div class="bg" data-close></div>
+      <div class="card">
+        <div class="mhead">
+          <div class="mtag" style="background:${t.div==='jhs'?'var(--jhs)':'var(--shs)'}"><span class="l">${esc(t.name)}</span></div>
+          <div><div class="mname">${tName(t)}</div><div class="mrng">${esc(divLabel(t.div))} ${esc(DIVS[t.div].range)}</div></div>
+        </div>
+        <div class="row"><span class="k">${esc(TT().mSubject)}</span><span class="v">${esc(subLabel(t.dept))}</span></div>
+        <div class="row"><span class="k">${esc(TT().mLocation)}</span><span class="v">${esc(locLabel(t.loc))}</span></div>
+        <div class="row"><span class="k">${esc(TT().mActivity)}</span><span class="v act">${t.act?esc(actLabel(t.act)):esc(TT().detailNone)}</span></div>
+        <div class="row"><span class="k">${esc(TT().mUpdated)}</span><span class="v">${esc(ago(t.updatedAt))}</span></div>
+        <button class="close" data-close>${esc(TT().close)}</button>
+      </div>`;
+    m.hidden=false;
+    m.querySelectorAll("[data-close]").forEach(el=>el.addEventListener("click",()=>{m.hidden=true;}));
+  }
+
+  /* ===== ボード ===== */
+  let div="jhs",fName="",fDept="all",fLoc="all";
+  function matches(t){
+    if(fName&&!hay(t).includes(fName.trim().toLowerCase()))return false;
+    if(fDept!=="all"&&t.dept!==fDept)return false;
+    if(fLoc!=="all"&&t.loc!==fLoc)return false;
+    return true;
+  }
+  function anyFilter(){return fName||fDept!=="all"||fLoc!=="all";}
+
+  function renderBoard(){
+    stopTimer();
+    root.innerHTML=`<div class="wrap">
+      <div class="toprow"><div><div class="eb">${esc(TT().brand)}</div><h1 class="title">${esc(TT().title)}</h1></div>${topRight()}</div>
+      <p class="lede">${esc(TT().lede)}</p>
+      <div class="divsw" role="group">
+        <button data-on="jhs" aria-pressed="${div==='jhs'}">${esc(divLabel('jhs'))}<span class="rng">${DIVS.jhs.range}</span></button>
+        <button data-on="shs" aria-pressed="${div==='shs'}">${esc(divLabel('shs'))}<span class="rng">${DIVS.shs.range}</span></button>
+      </div>
+      <div class="filters">
+        <div class="search"><span class="ico">⌕</span><input id="q" type="search" placeholder="${esc(TT().searchName)}" value="${esc(fName)}" autocomplete="off"></div>
+        <select id="f-dept"><option value="all">${esc(TT().subAll)}</option>${SUBJECTS.map(s=>`<option value="${esc(s)}"${fDept===s?" selected":""}>${esc(subLabel(s))}</option>`).join("")}</select>
+        <select id="f-loc"><option value="all">${esc(TT().locAll)}</option>${LOCATIONS.map(l=>`<option value="${esc(l)}"${fLoc===l?" selected":""}>${esc(locLabel(l))}</option>`).join("")}</select>
+        <button class="reset" id="reset" style="display:${anyFilter()?'inline':'none'}">${esc(TT().reset)}</button>
+        <span class="count" id="count"></span>
+      </div>
+      <div class="legend"><span><i class="d-class"></i>${esc(actLabel("授業中"))}</span><span><i class="d-meet"></i>${esc(actLabel("会議中"))}</span></div>
+      <div class="board" id="board">${lanesHTML(div)}</div>
+      <div class="note">${esc(TT().noteA)}<a href="#links">${esc(TT().noteLink)}</a>${esc(TT().noteB)}</div>
+    </div>`;
+
+    root.querySelectorAll(".divsw button").forEach(b=>b.addEventListener("click",()=>{div=b.dataset.on;renderBoard();}));
+    document.getElementById("q").addEventListener("input",e=>{fName=e.target.value;refreshBoard();});
+    document.getElementById("f-dept").addEventListener("change",e=>{fDept=e.target.value;refreshBoard();});
+    document.getElementById("f-loc").addEventListener("change",e=>{fLoc=e.target.value;refreshBoard();});
+    document.getElementById("reset").addEventListener("click",()=>{fName="";fDept="all";fLoc="all";renderBoard();});
+    document.getElementById("board").addEventListener("click",e=>{const el=e.target.closest(".tag");if(el)openDetail(el.dataset.id);});
+
+    refreshBoard();
+    timer=setInterval(refreshBoard,10000);
+    window.addEventListener("storage",onStorage);
+    maybeHelp('board');
+  }
+  function onStorage(e){if(e.key===STORE_KEY)refreshBoard();}
+
+  function refreshBoard(){
+    const b=document.getElementById("board"); if(!b)return;
+    b.innerHTML=lanesHTML(div);
+    const data=getData().filter(t=>t.div===div);
+    let vis=0;
+    b.querySelectorAll(".tag").forEach(el=>{const t=data.find(x=>x.id===el.dataset.id);if(!t)return;const ok=matches(t);el.classList.toggle("dim",!ok);if(ok)vis++;});
+    const c=document.getElementById("count"); if(c)c.innerHTML=anyFilter()?TT().countVis(vis,data.length):TT().count(data.length);
+    const r=document.getElementById("reset"); if(r)r.style.display=anyFilter()?"inline":"none";
+  }
+
+  /* ===== 先生の更新 ===== */
+  function renderTeacher(id){
+    stopTimer();
+    const t=findTeacher(id);
+    if(!t){root.innerHTML=`<div class="wrap"><div class="toprow"><a class="back" href="#">${esc(TT().backList)}</a>${topRight()}</div><p style="margin-top:14px">${esc(TT().notFound)}</p></div>`;return;}
+    const d=t.div;
+    const cur=`${esc(TT().current)}${esc(locLabel(t.loc))}${t.act?TT().sep+esc(actLabel(t.act)):''}${TT().sep}${esc(ago(t.updatedAt))}`;
+    root.innerHTML=`<div class="wrap">
+      <div class="toprow"><a class="back" href="#">${esc(TT().backBoard)}</a>${topRight()}</div>
+      <div class="hint ${d}"><span class="nm">${tName(t)}</span>（${esc(divLabel(d))} ${esc(DIVS[d].range)}）　${TT().hint(t.name)}
+        <span class="cur">${cur}</span></div>
+      <div class="acts" role="group">
+        <span class="lbl">${esc(TT().activity)}</span>
+        <button data-act="" aria-pressed="${t.act===''}">${esc(TT().actNone)}</button>
+        ${ACTIVITIES.map(a=>`<button data-act="${esc(a)}" aria-pressed="${t.act===a}">${esc(actLabel(a))}</button>`).join("")}
+      </div>
+      <div class="locpick" role="group">
+        <span class="lbl">${esc(TT().locationLabel)}</span>
+        ${LOCATIONS.map(l=>`<button data-loc="${esc(l)}" aria-pressed="${t.loc===l}">${esc(locLabel(l))}</button>`).join("")}
+      </div>
+      <div class="legend"><span><i class="d-class"></i>${esc(actLabel("授業中"))}</span><span><i class="d-meet"></i>${esc(actLabel("会議中"))}</span></div>
+      <div class="board" id="tboard">${lanesHTML(d,{meId:id})}</div>
+      <p class="note">${esc(TT().teacherNote)}</p>
+    </div>`;
+    const me=root.querySelector('.tag.me');
+    if(me)me.addEventListener("pointerdown",ev=>startDrag(ev,id));
+    root.querySelectorAll(".acts button").forEach(b=>b.addEventListener("click",()=>{const a=b.dataset.act;setActivity(id,a);renderTeacher(id);toast(a?TT().toastAct(actLabel(a)):TT().toastActOff);}));
+    root.querySelectorAll(".locpick button").forEach(b=>b.addEventListener("click",()=>{const l=b.dataset.loc;setLocation(id,l);renderTeacher(id);toast(TT().toastPlaced(locLabel(l)));}));
+    maybeHelp('teacher');
+  }
+
+  let ghost=null,offX=0,offY=0,curId=null;
+  function startDrag(e,id){
+    e.preventDefault();curId=id;
+    const el=e.currentTarget,r=el.getBoundingClientRect();
+    ghost=el.cloneNode(true);ghost.classList.add("ghost");
+    ghost.style.width=r.width+"px";ghost.style.left=r.left+"px";ghost.style.top=r.top+"px";
+    document.body.appendChild(ghost);el.style.opacity=".2";
+    offX=e.clientX-r.left;offY=e.clientY-r.top;
+    window.addEventListener("pointermove",onMove);window.addEventListener("pointerup",onUp);
+  }
+  function laneAt(x,y){const el=document.elementFromPoint(x,y);return el?el.closest(".lane"):null;}
+  function onMove(e){
+    if(!ghost)return;
+    ghost.style.left=(e.clientX-offX)+"px";ghost.style.top=(e.clientY-offY)+"px";
+    document.querySelectorAll(".lane.over").forEach(l=>l.classList.remove("over"));
+    const lane=laneAt(e.clientX,e.clientY);if(lane)lane.classList.add("over");
+  }
+  function onUp(e){
+    window.removeEventListener("pointermove",onMove);window.removeEventListener("pointerup",onUp);
+    const lane=laneAt(e.clientX,e.clientY);
+    if(ghost){ghost.remove();ghost=null;}
+    document.querySelectorAll(".lane.over").forEach(l=>l.classList.remove("over"));
+    if(lane&&lane.dataset.loc){const loc=lane.dataset.loc;setLocation(curId,loc);renderTeacher(curId);toast(TT().toastPlaced(locLabel(loc)));}
+    else renderTeacher(curId);
+    curId=null;
+  }
+
+  /* ===== デモ用リンク一覧 ===== */
+  let lq="";
+  function renderLinks(){
+    stopTimer();
+    root.innerHTML=`<div class="wrap"><div class="links">
+      <div class="toprow"><a class="back" href="#">${esc(TT().backList)}</a>${topRight()}</div>
+      <div class="eb" style="margin-top:14px">${esc(TT().demo)}</div>
+      <h2>${esc(TT().linksH)}</h2>
+      <p class="sub">${esc(TT().linksSub)}</p>
+      <div class="search"><span class="ico">⌕</span><input id="lq" type="search" placeholder="${esc(TT().searchNameDept)}" value="${esc(lq)}" autocomplete="off"></div>
+      <div id="lklist"></div>
+    </div></div>`;
+    document.getElementById("lq").addEventListener("input",e=>{lq=e.target.value;renderLkList();});
+    renderLkList();
+  }
+  function renderLkList(){
+    const host=document.getElementById("lklist");if(!host)return;
+    const data=getData();const k=lq.trim().toLowerCase();
+    function group(d){
+      let list=data.filter(t=>t.div===d);
+      if(k)list=list.filter(t=>hay(t).includes(k));
+      if(!list.length)return"";
+      const items=list.map(t=>`<a class="lk" href="#t=${t.id}">${tagHTML(t,{})}
+        <span><span class="nm">${tName(t)}</span><br><span class="dp">${esc(subLabel(t.dept))}</span></span>
+        <span class="go">→</span></a>`).join("");
+      return `<div class="grp">${esc(divLabel(d))}（${esc(DIVS[d].range)}）</div><div class="lkgrid">${items}</div>`;
+    }
+    const html=group("jhs")+group("shs");
+    host.innerHTML=html||`<p style="color:var(--faint);font-size:14px">${esc(TT().noMatch)}</p>`;
+  }
+
+  /* ===== routing ===== */
+  function route(){window.removeEventListener("storage",onStorage);document.getElementById("modal").hidden=true;const h=location.hash.replace(/^#/,"");if(h.indexOf("t=")===0)return renderTeacher(h.slice(2));if(h==="links")return renderLinks();return renderBoard();}
+  document.addEventListener("click",e=>{
+    if(e.target.closest(".langtoggle")){setLang(lang==='ja'?'en':'ja');route();return;}
+    if(e.target.closest(".helpbtn")){const h=location.hash.replace(/^#/,"");openHelp(h.indexOf("t=")===0?'teacher':'board');}
+  });
+  window.addEventListener("hashchange",route);
+  route();
+})();
+</script>
+</body>
+</html>
